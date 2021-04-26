@@ -4,22 +4,29 @@ import {
 	TFormSchemaArrayParams,
 	TFormSchemaNode,
 	TFormSchemaObjectParams,
-	TFormSchemaValueParams
+	TFormSchemaValueParams,
+	TFormValueGetter
 } from './useForm.types'
 
-export const textField = (params: TFormSchemaValueParams<string> = {}) => ({
+export const textField = (
+	params: TFormSchemaValueParams<TFormValueGetter, string> = {}
+) => ({
 	__node: 'value',
 	__type: 'string',
 	__params: params
 })
 
-export const booleanField = (params: TFormSchemaValueParams<boolean> = {}) => ({
+export const booleanField = (
+	params: TFormSchemaValueParams<TFormValueGetter, boolean> = {}
+) => ({
 	__node: 'value',
 	__type: 'boolean',
 	__params: params
 })
 
-export const numberField = (params: TFormSchemaValueParams<number> = {}) => ({
+export const numberField = (
+	params: TFormSchemaValueParams<TFormValueGetter, number> = {}
+) => ({
 	__node: 'value',
 	__type: 'number',
 	__params: params

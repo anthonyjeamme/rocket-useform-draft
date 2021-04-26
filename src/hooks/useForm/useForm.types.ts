@@ -1,3 +1,5 @@
+import { TFormValidator } from './validators/Validator.types'
+
 export type TUseForm<T = any> = () => TUseFormReturns<T>
 
 export type TForm = {
@@ -25,6 +27,32 @@ export type TForm = {
 	 *
 	 */
 	getValue: (path: TFormNodePath) => TFormValueGetter
+
+	/**
+	 *
+	 */
+	addEventListener: (event: TFormEventType, callbackTFormEventCallback) => void
+
+	/**
+	 *
+	 */
+	removeEventListener: (
+		event: TFormEventType,
+		callbackTFormEventCallback
+	) => void
+}
+
+export type TFormEventListenerRef = {
+	change: TFormEventCallback[]
+}
+export type TFormEventType = 'change'
+export type TFormEventCallback = (event: TFormEvent) => void
+export type TFormEvent = {
+	type: TFormEventType
+	path: TFormNodeArrayPath
+	pathString: TFormNodeStringPath
+	oldValue: any
+	newValue: any
 }
 
 export type TFormSchema = any
@@ -83,7 +111,15 @@ export type TFormNodeStringPath = string
 export type TFormNodeArrayPath = string[]
 
 export type TFormTools = {
-	handleModified: () => void
+	handleModified: ({
+		path,
+		oldValue,
+		newValue
+	}: {
+		path: TFormNodeArrayPath
+		oldValue: any
+		newValue: any
+	}) => void
 	refresh: () => void
 	generateId: () => string
 }
@@ -102,7 +138,12 @@ export type TFormValueGetter = {
 	update: (value: any, refresh?: boolean) => void
 	error: boolean
 	getPath: () => TFormNodeArrayPath
-}
+} & TFormGetters
+
+export type TFormGetter =
+	| TFormObjectGetter
+	| TFormArrayGetter
+	| TFormValueGetter
 
 export type TFormObjectGetter = {
 	id: string
@@ -153,7 +194,7 @@ export type TFormSchemaNode = (
 
 export type TValueFormSchemaNode = {
 	__node: 'value'
-	__params: TFormSchemaValueParams<any>
+	__params: TFormSchemaValueParams<any, any>
 	__type: TFormDataValueFieldType
 }
 
@@ -168,11 +209,12 @@ export type TArrayFormSchemaNode = {
 	__childType: TFormSchemaNode
 }
 
-export type TFormSchemaValueParams<TDataType = any> = {
-	required?: boolean
+export type TFormSchemaValueParams<TGetter, TDataType> = {
+	required?: boolean | ((getter: TGetter) => boolean)
 	readOnly?: boolean
 	defaultValue?: TDataType
 	validation?: TFormValidationFunction
+	validators?: TFormValidator[]
 	autoRefresh?: boolean
 }
 

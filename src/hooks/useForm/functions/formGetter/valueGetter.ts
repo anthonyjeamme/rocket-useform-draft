@@ -1,12 +1,28 @@
 import {
+	TFormDataValueFieldType,
 	TFormDataValueNode,
 	TFormValueGetter,
 	TValueFormSchemaNode
 } from '../../useForm.types'
 
-import { getObjectPathChild, pathToStringPath } from '../../utils/formPath'
-import { getGetterGenericFields } from './formGetter.common'
+import {
+	getObjectPathChild,
+	pathToArrayPath,
+	pathToStringPath
+} from '../../utils/formPath'
+import { getGetterGenericFields, getStandardGetters } from './formGetter.common'
 import { TGetterProps } from './formGetter.types'
+
+const parseValue = (value: any, type: TFormDataValueFieldType) => {
+	switch (type) {
+		case 'string':
+			return value.toString()
+		case 'number':
+			return parseFloat(value)
+		case 'boolean':
+			return !!value
+	}
+}
 
 const valueGetter = ({
 	formDataRef,
@@ -21,26 +37,38 @@ const valueGetter = ({
 	}
 
 	const update = (value, refresh = false) => {
-		const child = getObjectPathChild(
+		const node = getObjectPathChild(
 			formDataRef.current,
 			path,
 			formParams
 		) as TFormDataValueNode
 
-		const params = (child.__schema as TValueFormSchemaNode).__params
+		const params = (node.__schema as TValueFormSchemaNode).__params
 
 		if (params.readOnly) {
 			console.error(`Can't write ${pathToStringPath(path)} : readOnly field`)
 			return
 		}
 
-		child.__value = value
-		formTools.handleModified()
+		// TODO check entry value ?
+		const oldValue = node.__value
+		node.__value = parseValue(value, node.__type)
+		formTools.handleModified({
+			path: pathToArrayPath(path),
+			oldValue,
+			newValue: node.__value
+		})
 		if (refresh || params.autoRefresh) formTools.refresh()
 	}
 
 	return {
 		...getGetterGenericFields({ formDataRef, child, path, formParams }),
+		...getStandardGetters({
+			formDataRef,
+			formParams,
+			formTools,
+			path
+		}),
 		value: child.__value,
 		update
 	}

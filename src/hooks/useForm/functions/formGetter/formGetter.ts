@@ -5,13 +5,14 @@ import objectGetter from './objectGetter'
 import valueGetter from './valueGetter'
 
 import { TGetterProps } from './formGetter.types'
+import { TFormGetter } from '../../useForm.types'
 
 const formGetter = ({
 	formDataRef,
 	path,
 	formTools,
 	formParams
-}: TGetterProps) => {
+}: TGetterProps): TFormGetter => {
 	const child = getObjectPathChild(formDataRef.current, path, formParams)
 
 	const getterProps: TGetterProps = {
@@ -25,7 +26,7 @@ const formGetter = ({
 	if (child.__node === 'array') return arrayGetter(getterProps)
 	if (child.__node === 'object') return objectGetter(getterProps)
 
-	return {}
+	return null
 }
 
 export default formGetter

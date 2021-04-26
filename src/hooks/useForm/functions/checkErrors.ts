@@ -4,12 +4,29 @@ import {
 	TFormDataObjectNode,
 	TFormDataValueNode,
 	TFormNodePath,
+	TFormParams,
+	TFormTools,
 	TValueFormSchemaNode
 } from '../useForm.types'
 
+import formGetter from './formGetter/formGetter'
+
 import { getObjectPathChild, mergePaths } from '../utils/formPath'
 
-const checkErrors = (formDataRef: React.MutableRefObject<TFormDataNode>) => {
+/**
+ * Recursively check errors.
+ * Each nodes with error, or with child in error get node.__error=true.
+ *
+ * For example :
+ *   { user: { name: textField() } }
+ *
+ * If name has an error, each nodes [user] and [name] will get __error=true.
+ */
+const checkErrors = (
+	formTools: TFormTools,
+	formParams: TFormParams,
+	formDataRef: React.MutableRefObject<TFormDataNode>
+) => {
 	const checkObjectNodeError = (
 		node: TFormDataObjectNode,
 		path: TFormNodePath
@@ -42,28 +59,41 @@ const checkErrors = (formDataRef: React.MutableRefObject<TFormDataNode>) => {
 		return !hasError
 	}
 
+	const getIsRequired = ({ params, path }) => {
+		if (params.required) {
+			if (typeof params.required === 'function') {
+				return params.required(
+					formGetter({
+						formDataRef,
+						path,
+						formParams,
+						formTools
+					})
+				)
+			}
+			return true
+		}
+		return false
+	}
+
 	const checkValueNodeError = (
 		node: TFormDataValueNode,
 		path: TFormNodePath
 	) => {
 		const params = (node.__schema as TValueFormSchemaNode).__params
 
-		if (params.required) {
-			switch (node.__type) {
-				case 'string':
-					if (!node.__value) {
-						node.__error = true
-						return false
-					}
-					break
-			}
+		const isRequired = getIsRequired({ params, path })
+
+		if (!isRequired && [null, undefined, ''].includes(node.__value)) {
+			node.__error = false
+			return true
 		}
 
 		if (params.validation) {
 			const isValid = params.validation(node.__value, p => {
 				return getObjectPathChild(
 					formDataRef.current,
-					mergePaths([path, [p]]),
+					mergePaths([path, p]),
 					{}
 				)
 			})
@@ -71,6 +101,25 @@ const checkErrors = (formDataRef: React.MutableRefObject<TFormDataNode>) => {
 			if (!isValid) {
 				node.__error = true
 				return false
+			}
+		} else if (params.validators?.length) {
+			for (const validator of params.validators) {
+				if (!validator(node.__value)) {
+					node.__error = true
+					return false
+				}
+			}
+		} else {
+			if (node.__type === 'string') {
+				if ([null, undefined, ''].includes(node.__value)) {
+					node.__error = true
+					return false
+				}
+			} else if (node.__type === 'number') {
+				if (parseFloat(node.__value) === NaN) {
+					node.__error = true
+					return false
+				}
 			}
 		}
 

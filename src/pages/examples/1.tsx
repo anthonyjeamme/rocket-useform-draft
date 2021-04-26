@@ -1,8 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 import {
 	matchCustomInput,
-	matchInput,
 	useRefresh
 } from '../../hooks/useForm/functions/misc'
 import { useForm } from '../../hooks/useForm/useForm'
@@ -13,6 +12,7 @@ import {
 	FormSchema,
 	textField
 } from '../../hooks/useForm/useFormSchema'
+import Validator from '../../hooks/useForm/validators/Validator'
 
 const data = {
 	showLastName: true,
@@ -20,11 +20,11 @@ const data = {
 		{
 			firstName: 'melina',
 			lastName: 'badin'
-		},
-		{
-			firstName: 'anthony',
-			lastName: 'jeamme'
 		}
+		// {
+		// 	firstName: 'anthony',
+		// 	lastName: 'jeamme'
+		// }
 	],
 	location: {
 		city: 'lyon',
@@ -41,7 +41,16 @@ const Example1Schema = FormSchema<Example1Type>({
 	}),
 	users: arrayField({
 		firstName: textField({
-			required: true
+			required: true,
+			validators: [
+				Validator.minLength(3),
+				Validator.maxLength(10),
+				Validator.pattern(/^[a-z 0-9]*$/)
+			]
+		}),
+		email: textField({}),
+		website: textField({
+			validators: [Validator.url()]
 		}),
 		lastName: textField({
 			defaultValue: 'XXXX'
@@ -73,6 +82,10 @@ type Example1UserType = TArray<{
 const Example1 = () => {
 	const form = useForm(data, Example1Schema)
 
+	useEffect(() => {
+		form.setModified(true)
+	}, [])
+
 	const refresh = useRefresh()
 
 	return (
@@ -102,8 +115,6 @@ const Example1 = () => {
 				{form.getArray('users').map(user => (
 					<User user={user} key={user.id} />
 				))}
-
-				<div>{JSON.stringify(form.getArray('users').toJSON(), null, 4)}</div>
 
 				<button
 					onClick={() => {
@@ -146,6 +157,7 @@ const Example1 = () => {
 				}}
 			>
 				<textarea
+					readOnly
 					style={{
 						width: '100%',
 						height: 600
@@ -163,7 +175,9 @@ const User = ({ user }: { user: TFormObjectGetter }) => {
 	return (
 		<div>
 			<Input {...matchCustomInput(user.getValue('firstName'))} />
-			{showLastName && <input {...matchInput(user.get('lastName'))} />}
+			{/* <Input {...matchCustomInput(user.getValue('email'))} />
+			<Input {...matchCustomInput(user.getValue('website'))} />
+			{showLastName && <input {...matchInput(user.get('lastName'))} />} */}
 		</div>
 	)
 }
@@ -175,7 +189,7 @@ const Input = ({ value, onChange, error }) => (
 			onChange(e.target.value)
 		}}
 		style={{
-			border: error ? `2px solid red` : `2px solid transparent`
+			border: error ? `2px solid red` : `2px solid black`
 		}}
 	/>
 )

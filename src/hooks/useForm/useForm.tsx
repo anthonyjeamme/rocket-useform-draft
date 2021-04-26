@@ -14,26 +14,43 @@ import {
 	TForm,
 	TFormArrayGetter,
 	TFormDataNode,
+	TFormEventType,
+	TFormEventCallback,
 	TFormNodePath,
 	TFormObjectGetter,
 	TFormParams,
 	TFormSchema,
 	TFormTools,
-	TFormValueGetter
+	TFormValueGetter,
+	TFormEventListenerRef
 } from './useForm.types'
+import { pathToStringPath } from './utils/formPath'
 
 export function useForm<T = any>(
 	data: T,
 	schema: TFormSchema,
 	formParams?: TFormParams
 ): TForm {
+	const eventListenersRef = useRef<TFormEventListenerRef>({
+		change: []
+	})
 	const [modified, setModified] = useState<boolean>(false)
 	const refresh = useRefresh()
 	const generateId = useIdGenerator()
 
 	const formTools: TFormTools = {
-		handleModified: () => {
+		handleModified: ({ path, oldValue, newValue }) => {
 			setModified(true)
+
+			for (const listener of eventListenersRef.current.change) {
+				listener({
+					path,
+					pathString: pathToStringPath(path),
+					type: 'change',
+					oldValue,
+					newValue
+				})
+			}
 		},
 		refresh,
 		generateId
@@ -42,13 +59,6 @@ export function useForm<T = any>(
 	const formDataRef = useRef<TFormDataNode>(
 		generateFormData(data, schema, [], formTools)
 	)
-
-	// useEffect(() => {
-	// 	const json = formNodeToJSON(formDataRef.current)
-	// 	formDataRef.current = generateFormData(json, schema, [], formTools)
-
-	// 	console.log(schema, 'updated')
-	// }, [schema])
 
 	const toJSON = () => formNodeToJSON(formDataRef.current)
 
@@ -60,8 +70,7 @@ export function useForm<T = any>(
 	})
 
 	const checkForm = () => {
-		const isOk = checkErrors(formDataRef)
-		console.log({ isOk })
+		const isOk = checkErrors(formTools, formParams, formDataRef)
 		refresh()
 		return isOk
 	}
@@ -78,11 +87,28 @@ export function useForm<T = any>(
 	const getValue = (path: TFormNodePath) =>
 		valueGetter(getterProps(path)) as TFormValueGetter
 
+	const addEventListener = (
+		event: TFormEventType,
+		callback: TFormEventCallback
+	) => {
+		eventListenersRef.current[event].push(callback)
+	}
+	const removeEventListener = (
+		event: TFormEventType,
+		callback: TFormEventCallback
+	) => {
+		eventListenersRef.current[event] = eventListenersRef.current[event].filter(
+			listener => listener !== callback
+		)
+	}
+
 	return {
 		toJSON,
 		modified,
 		setModified,
 		checkForm,
+		addEventListener,
+		removeEventListener,
 
 		// Getters
 		get,
